@@ -1,4 +1,5 @@
 
+from enum import Enum
 """ Register map and other constaints relating the zx_sensor I2C interface
 """
 
@@ -52,17 +53,15 @@ MAX_Z = 240
 SET_ALL_DRE = 0b00111111
 
 # Enumeration for possible gestures
-gesture_type = {
-    'RIGHT_SWIPE': 0x01,
-    'LEFT_SWIPE': 0x02,
-    'UP_SWIPE': 0x03,
-    'NO_GESTURE': 0xFF,
-}
+class gesture_type(Enum):
+    RIGHT_SWIPE = 0x01
+    LEFT_SWIPE = 0x02
+    UP_SWIPE = 0x03
+    NO_GESTURE = 0xFF
 
 # Enumeration for possible interrupt enables
-interrupt_type = {
-    'NO_INTERRUPTS': 0x00,
-    'POSITION_INTERRUPTS': 0x01,
-    'GESTURE_INTERRUPTS': 0x02,
-    'ALL_INTERRUPTS': 0x03
-}
+class interrupt_type(Enum):
+    NO_INTERRUPTS = 0x00
+    POSITION_INTERRUPTS = 0x01
+    GESTURE_INTERRUPTS = 0x02
+    ALL_INTERRUPTS = 0x03
