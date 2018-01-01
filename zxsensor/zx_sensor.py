@@ -1,10 +1,10 @@
+# -*- coding: utf-8 -*-
 
 # standard
 from __future__ import division, print_function
-from enum import Enum
+import logging
 # external
 from Adafruit_I2C import Adafruit_I2C
-import RPi.GPIO as GPIO
 # project
 from i2c_registers import *
 
@@ -12,25 +12,35 @@ class ZxSensor:
     """ Main class for interfacing with the zx_sensor
     """
 
-    def __init__(self, address=0x10, interrupt_pin=4, interrupts=interrupt_type.NO_INTERRUPTS, active_high = True):
-        self.i2c = Adafruit_I2C(address)
-        self.i2c.debug = True
+    def __init__(self, address=0x10, interrupts=interrupt_type.NO_INTERRUPTS, active_high = True):
+        self.logger = logging.getLogger('ZxSensor')
 
-        print("model version", self.get_model_version())
-        print(self.get_reg_map_version())
+        self.i2c = Adafruit_I2C(address)
+        self.i2c.debug = False 
+
+        self.logger.info("model version %s", self.get_model_version())
+        self.logger.info(self.get_reg_map_version())
         #print(self.position_available())
 
         # Enable DR interrupts based on desired interrupts
         if (not self.setInterruptTrigger(interrupts)):
             print("Could not set interrupt triggers!")
         self.configureInterrupts(active_high, False);
-#        if ( interrupts == NO_INTERRUPTS ) {
-#            disableInterrupts();
-#        } else {
-#            enableInterrupts();
-#        }
+        if (interrupts == interrupt_type.NO_INTERRUPTS): 
+            self.disableInterrupts()
+        else:
+            self.enableInterrupts()
+        
 
     def setInterruptTrigger(self, interrupts):
+        """Sets the triggers that cause the DR pin to change
+
+        Args:
+            interrupts(interrupt_type): which types of interrupts to enable
+
+        Returns:
+            True if operation successful. False otherwise.
+        """
         if (interrupts == interrupt_type.POSITION_INTERRUPTS):
             if (not self.setRegisterBit(ZX_DRE, DRE_CRD)):
                 return False
@@ -42,14 +52,26 @@ class ZxSensor:
             if (not self.setRegisterBit(ZX_DRE, DRE_HVG)):
                 return False
         elif (interrupts == interrupt_type.ALL_INTERRUPTS):
-            if (not self.setRegisterBit(ZX_DRE, SET_ALL_DRE)):
+            if (self.i2c.write8(ZX_DRE, SET_ALL_DRE) != None):
                 return False
         else:
-            if (not self.setRegisterBit(ZX_DRE, 0x00)):
+            if (self.i2c.write8(ZX_DRE, 0x00) != None):
                 return False
         return True    
 
     def configureInterrupts(self, active_high=False, pin_pulse=False):
+        """Configures the behavior of the DR pin on an interrupt
+        
+        Args:
+            active_high(bool, optional): active_high true for DR active-high. 
+                False for active-low. Defaults to False.
+            pin_pulse(bool, optional): true: DR pulse. False: DR pin asserts
+                until STATUS read. Defaults to False
+
+        Returns:                        
+            True if operation successful. False otherwise.
+        """
+        self.logger.debug("configuring interrupts, active_high: %s, pin_pulse: %s", active_high, pin_pulse)
         # Set or clear polarity bit to make DR active-high or active-low
         if (active_high): 
             if (not self.setRegisterBit(ZX_DRCFG, DRCFG_POLARITY)):
@@ -65,6 +87,70 @@ class ZxSensor:
         else:
             if (not self.clearRegisterBit(ZX_DRCFG, DRCFG_EDGE)):
                 return False
+
+    def enableInterrupts(self):
+        """Turns on interrupts so that DR asserts on desired events.
+        
+        Returns:
+            True if operation successful. False otherwise.
+        """
+        if (self.setRegisterBit(ZX_DRCFG, DRCFG_EN)):
+            return True
+        return False
+     
+    def disableInterrupts(self):
+        """Turns off interrupts so that DR will never assert.
+
+        Returns:
+            True if operation successful. False otherwise.
+        """
+        if (self.clearRegisterBit(ZX_DRCFG, DRCFG_EN)):
+            return True
+        return False
+
+    def clearInterrupts(self):
+        """Reads the STATUS register to clear an interrupt (de-assert DR)
+
+        Returns:
+            True if operation successful. False otherwise.
+        """
+        self.logger.debug("Clearing interupts")
+        val = self.i2c.readU8(ZX_STATUS)
+        if (val == None):
+            self.logger.error("Could not read from register {}, error: {}".format(ZX_STATUS, val))
+            return False
+        return True
+
+    def readGesture(self):
+        """Reads the last detected gesture from the sensor
+        0x01 Right Swipe
+        0x02 Left Swipe
+        0x03 Up Swipe
+        
+        Returns:
+            a number corresponding to  a gesture. 0xFF on error.
+
+        """
+
+        # Read GESTURE register and return the value 
+        gesture = self.i2c.readU8(ZX_GESTURE)
+        self.logger.debug("Read gesture {} from register {}".format(gesture, ZX_GESTURE))
+        return gesture_type(gesture)
+
+#        if (gesture == None):
+#            return gesture_type.NO_GESTURE
+#        if (gesture == gesture_type.RIGHT_SWIPE):
+#            return gesture_type.RIGHT_SWIPE
+#       elif (gesture == gesture_type.LEFT_SWIPE):
+#            return gesture_type.LEFT_SWIPE 
+#        elif (gesture == gesture_type.UP_SWIPE):
+#            return gesture_type.UP_SWIPE 
+#        else:
+#            return gesture_type.NO_GESTURE
+    
+    def readGestureSpeed(self):
+        val = self.i2c.readU8(ZX_GSPEED)
+        return val
 
     def get_model_version(self):
         return self.i2c.readU8(ZX_MODEL)
@@ -91,37 +177,40 @@ class ZxSensor:
         return z_pos
 
     def setRegisterBit(self, reg, bit):
+        self.logger.debug("Setting bit {} in register {:02X}".format(bit, reg))
         # Read value from register 
         val = self.i2c.readU8(reg)
         if (val == None):
+            self.logger.error("Read from i2c register %s returned no value!", reg)
             return False
 
+        self.logger.debug("Read value {:08b} from register {}".format(val, reg))
         # Set bits in register and write back to the register
-        val |= (1 << bit);
+        val |= (1 << bit)
+        self.logger.debug("Setting value {:08b} to register {}".format(val, reg))
+
         retval = self.i2c.write8(reg, val)
         if (retval != None):
-            print(retval) 
+            self.logger.error("Writing value %s to register %s was not successfull. Error message: %s", val, reg, retval)
             return False
-
         return True
 
     def clearRegisterBit(self, reg, bit):
+        self.logger.debug("Clearing bit {} from register {:02X}".format(bit, reg))
         # clear the value from register
         val = self.i2c.readU8(reg)
         if (val == None):
+            self.logger.error("Read from i2c register %s returned no value!", reg)
             return False
 
+        self.logger.debug("Read value {:08b} from register {}".format(val, reg))
         val &= ~(1 << bit)
+        self.logger.debug("Setting value {:08b} to register {}, bit: {}".format(val, reg, bit))
         retval = self.i2c.write8(reg, val)
-     
         if (retval != None):
-            print(retval)
+            self.logger.error("Writing value %s to register %s was not successfull. Error message: %s", val, reg, retval)
             return False
         return True
-
-    def cancel(self):
-        # Cleanup GPIO Ports
-        GPIO.cleanup()
 
 if __name__ == '__main__':
     pass
