@@ -4,9 +4,10 @@
 a Rasberry Pi. Tested with Pi2. When run, prints 'x' & 'z' to console
 """
 
-import time
+import time, sys, os
 # project
-from zx_sensor import ZxSensor
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from zxsensor import ZxSensor
 
 # Initialise the ZxSensor device using the default address
 zx_sensor = ZxSensor(0x10)
