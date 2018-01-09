@@ -204,7 +204,7 @@ class ZxSensor:
         """Reads the last detected gesture from the sensor
         0x01 Right Swipe
         0x02 Left Swipe
-        0x03 Up Swipe
+        0x08 Up Swipe
         
         Returns:
             a number corresponding to  a gesture. 0xFF on error.
@@ -216,11 +216,11 @@ class ZxSensor:
 
         if (gesture == None):
             return gesture_type.NO_GESTURE
-        elif (gesture == gesture_type.RIGHT_SWIPE):
+        elif (gesture == gesture_type.RIGHT_SWIPE.value):
             return gesture_type.RIGHT_SWIPE
-        elif (gesture == gesture_type.LEFT_SWIPE):
+        elif (gesture == gesture_type.LEFT_SWIPE.value):
             return gesture_type.LEFT_SWIPE 
-        elif (gesture == gesture_type.UP_SWIPE):
+        elif (gesture == gesture_type.UP_SWIPE.value):
             return gesture_type.UP_SWIPE 
         else:
             return gesture_type.NO_GESTURE

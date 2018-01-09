@@ -38,7 +38,7 @@ from zxsensor import *
 # external 
 import RPi.GPIO as GPIO
 
-logging.basicConfig(level=logging.WARN)
+logging.basicConfig(level=logging.DEBUG)
 
 # Set the DA pin to GPIO 17 of the Raspberry Pi
 channel = 17
@@ -75,6 +75,8 @@ def interrupt_callback(channel):
 
     gesture = zx_sensor.read_gesture()
     gesture_speed = zx_sensor.read_gesture_speed()
+
+    print(gesture)
 
     if (gesture == gesture_type.NO_GESTURE):
 	print("No Gesture")

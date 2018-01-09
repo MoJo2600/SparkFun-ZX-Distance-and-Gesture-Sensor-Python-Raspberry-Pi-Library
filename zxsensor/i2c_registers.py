@@ -56,7 +56,7 @@ SET_ALL_DRE = 0b00111111
 class gesture_type(Enum):
     RIGHT_SWIPE = 0x01
     LEFT_SWIPE = 0x02
-    UP_SWIPE = 0x03
+    UP_SWIPE = 0x08
     NO_GESTURE = 0x00
 
 # Enumeration for possible interrupt enables
