@@ -7,7 +7,7 @@ Relies on [Adafruit Raspberry Pi Python Code](https://github.com/adafruit/Adafru
 
 ## Run Instructions
 
-1. wire up to Pi's I2C and DA to GPIO17
+1. wire up to Pi's I2C and DR to GPIO17
 
 2. navigate to /examples/
 
