@@ -7,15 +7,15 @@ Relies on [Adafruit Raspberry Pi Python Code](https://github.com/adafruit/Adafru
 
 ## Run Instructions
 
-1. wire up to Pi's I2C
+1. wire up to Pi's I2C and DA to GPIO17
 
-2. navigate to /zxsensor/
+2. navigate to /examples/
 
 3. then run the following terminal command:
 ```bash
-python zx_sensor_demo.py
+python i2c_zx_demo.py
 ```
 
 ## Notes
-* only basic 'x' & 'z' value retrieval so far, no gestures yet
+* now with gestures - try examples/i2c_gesture_interrupt.py
 
